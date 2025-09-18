@@ -3,6 +3,7 @@
 # NOTE: Currently supported images:
 # quay.io/rockylinux/rockylinux:8
 # rockylinux:9
+# rockylinux:10
 ARG BASE_IMAGE="quay.io/rockylinux/rockylinux:8"
 FROM ${BASE_IMAGE}
 LABEL maintainer="Will Szumski will@stackhpc.com"
@@ -30,6 +31,7 @@ ENV container docker
 ARG BASE_IMAGE="quay.io/rockylinux/rockylinux:8"
 ARG USE_PYTHON_312="false"
 RUN dnf install epel-release -y && \
+    dnf config-manager --set-enabled crb && \
     dnf update -y --nobest && \
     if [ "$USE_PYTHON_312" = "true" ] ; then \
         dnf -y install python3.12 && \
@@ -42,9 +44,12 @@ RUN dnf install epel-release -y && \
         diffstat diffutils debootstrap procps-ng gdisk util-linux \
         dosfstools lvm2 kpartx systemd-udev bash-completion rsync \
         python3-libselinux jq && \
-    if [ "$(grep "^PRETTY_NAME=\"Rocky Linux 9" /etc/os-release)" ] ; then \
-    dnf install -y python3 python3-pip iproute ; else \
-    dnf install -y python3-virtualenv ; fi && \
+    . /etc/os-release && \
+    if [ "$ID" = "rocky" ] && [ "$VERSION_ID" = "8" ]; then \
+        dnf install -y python3-virtualenv ; \
+    else \
+        dnf install -y python3 python3-pip iproute ; \
+    fi && \
     dnf clean all
 
 # Configure lvm not to use udev for device discovery. This allows you to use
@@ -87,7 +92,7 @@ RUN chmod 600 /stack/.ssh/config
 COPY .automation/utils/kayobe-automation-activate .automation.conf/docker*/kayobe/bin/* /usr/local/bin/
 
 # Control host bootsrap without leaving kayobe-config in the image
-RUN --mount=type=ssh,uid=1000 --mount=type=tmpfs,target=/tmp/src --mount=type=bind,source=.,target=/src sudo cp -rfp /src /tmp/ && \
+RUN --mount=type=ssh,uid=1000 --mount=type=tmpfs,target=/tmp/src --mount=type=bind,source=.,target=/src,Z sudo cp -rfp /src /tmp/ && \
   sudo chown -Rf stack:stack /tmp/src && \
   # Strip the secrets so that we don't need to pass in a vault-password
   grep -lR "\$ANSIBLE_VAULT" /tmp/src | xargs rm -f && \
