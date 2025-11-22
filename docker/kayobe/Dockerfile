@@ -39,16 +39,19 @@ RUN dnf install epel-release -y && \
         python3 -m ensurepip && \
         dnf -y install python3.12-pyyaml ; else \
         dnf -y install python3-pyyaml ; fi && \
-    dnf install -y gcc git vim  findutils\
+    dnf install -y gcc git vim findutils \
         libffi-devel sudo which openssh-server e2fsprogs \
         diffstat diffutils debootstrap procps-ng gdisk util-linux \
         dosfstools lvm2 kpartx systemd-udev bash-completion rsync \
         python3-libselinux jq && \
     . /etc/os-release && \
-    if [ "$ID" = "rocky" ] && [ "$VERSION_ID" = "8" ]; then \
+    if [ "$ID" = "rocky" ] && [ "${VERSION_ID%%.*}" = "8" ]; then \
         dnf install -y python3-virtualenv ; \
     else \
         dnf install -y python3 python3-pip iproute ; \
+        if [ "$ID" = "rocky" ] && [ "${VERSION_ID%%.*}" = "10" ]; then \
+            dnf install -y openssl ; \
+        fi ; \
     fi && \
     dnf clean all
 
